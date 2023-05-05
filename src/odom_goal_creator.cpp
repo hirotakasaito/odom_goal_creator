@@ -4,7 +4,7 @@ OdomGoalCreator::OdomGoalCreator():private_nh("~")
 {
     private_nh.param("hz",hz,{10});
 
-    sub_odom = nh.subscribe("odometry", 10, &OdomGoalCreator::odom_callback, this);
+    sub_odom = nh.subscribe("/t_frog/odom", 10, &OdomGoalCreator::odom_callback, this);
     pub_local_goal = nh.advertise<geometry_msgs::PoseStamped>("/odom_goal", 1);
 }
 
@@ -55,8 +55,9 @@ void OdomGoalCreator::input_goal()
 bool OdomGoalCreator::calc_reached_goal(std::vector<double> trans_pose)
 {
     bool reached_goal = false;
-    double distance = sqrt(pow(goal[0] - trans_pose[0], 2) + pow(goal[1] - trans_pose[1], 2));
-    if(distance < 0.5) received_goal = true;
+    double distance = sqrt(pow(trans_pose[0], 2) + pow(trans_pose[1], 2));
+    std::cout<<distance<<std::endl;
+    if(distance < 0.5) reached_goal = true;
     return reached_goal;
 }
 
@@ -65,7 +66,6 @@ void OdomGoalCreator::process()
     ros::Rate loop_rate(hz);
     while(ros::ok())
     {
-        received_odom = true;
         if(received_odom && received_goal)
         {
             geometry_msgs::PoseStamped local_goal;
@@ -77,6 +77,7 @@ void OdomGoalCreator::process()
                 local_goal.pose.position.x = 0.0;
                 local_goal.pose.position.y = 0.0;
                 received_goal = false;
+                base_odom = odom;
             }
             else
             {
