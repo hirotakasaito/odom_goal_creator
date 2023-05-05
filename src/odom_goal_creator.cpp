@@ -31,6 +31,8 @@ std::vector<double> OdomGoalCreator::calc_goal()
         x*std::cos(by) + y*std::sin(by),
         -x*std::sin(by) + y*std::cos(by)
     };
+    trans_pose[0] = goal[0] - trans_pose[0];
+    trans_pose[1] = goal[1] - trans_pose[1];
     return trans_pose;
 }
 
