@@ -84,6 +84,7 @@ void OdomGoalCreator::process()
                 local_goal.pose.position.x = trans_pose[0];
                 local_goal.pose.position.y = trans_pose[1];
             }
+            local_goal.header.frame_id = "base_link";
             pub_local_goal.publish(local_goal);
         }
 
