@@ -18,10 +18,12 @@ private:
     void odom_callback(const nav_msgs::Odometry::ConstPtr &);
     std::vector<double> calc_goal();
     void input_goal();
-    bool calc_reached_goal(std::vector<double>);
+    void calc_reached_goal(std::vector<double>);
 
     bool received_odom = false;
     bool received_goal = false;
+    bool reached_goal = false;
+    bool base_odom_set = false;
     int hz;
     std::vector<double> goal;
 

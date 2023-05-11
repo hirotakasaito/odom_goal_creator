@@ -17,6 +17,12 @@ void OdomGoalCreator::odom_callback(const nav_msgs::OdometryConstPtr &msg)
 
 std::vector<double> OdomGoalCreator::calc_goal()
 {
+    if(!base_odom_set)
+    {
+        base_odom = odom;
+        base_odom_set = true;
+    }
+
     tf::Quaternion odom_q(odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w);
     tf::Quaternion base_odom_q(base_odom.pose.pose.orientation.x, base_odom.pose.pose.orientation.y, base_odom.pose.pose.orientation.z, base_odom.pose.pose.orientation.w);
     double r,p,cy;
@@ -52,13 +58,12 @@ void OdomGoalCreator::input_goal()
     if(a=="y") received_goal = true;
 }
 
-bool OdomGoalCreator::calc_reached_goal(std::vector<double> trans_pose)
+void OdomGoalCreator::calc_reached_goal(std::vector<double> trans_pose)
 {
-    bool reached_goal = false;
+    reached_goal = false;
     double distance = sqrt(pow(trans_pose[0], 2) + pow(trans_pose[1], 2));
     std::cout<<distance<<std::endl;
     if(distance < 0.5) reached_goal = true;
-    return reached_goal;
 }
 
 void OdomGoalCreator::process()
@@ -70,14 +75,14 @@ void OdomGoalCreator::process()
         {
             geometry_msgs::PoseStamped local_goal;
             std::vector<double> trans_pose = calc_goal();
-            bool reached_goal = calc_reached_goal(trans_pose);
+            calc_reached_goal(trans_pose);
             if(reached_goal)
             {
                 printf("Reach Goal!!\n");
                 local_goal.pose.position.x = 0.0;
                 local_goal.pose.position.y = 0.0;
                 received_goal = false;
-                base_odom = odom;
+                base_odom_set = false;
             }
             else
             {
@@ -87,15 +92,8 @@ void OdomGoalCreator::process()
             local_goal.header.frame_id = "base_link";
             pub_local_goal.publish(local_goal);
         }
-
-        else if(received_odom && !received_goal)
-        {
-            input_goal();
-        }
-        else
-        {
-            ROS_WARN("Not received Odometry\n");
-        }
+        else if(received_odom && !received_goal) input_goal();
+        else ROS_WARN("Not received Odometry\n");
 
         ros::spinOnce();
         loop_rate.sleep();
