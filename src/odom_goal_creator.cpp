@@ -3,6 +3,7 @@
 OdomGoalCreator::OdomGoalCreator():private_nh("~")
 {
     private_nh.param("hz",hz,{10});
+    private_nh.param("max_time",max_time,{10.0});
 
     sub_odom = nh.subscribe("/t_frog/odom", 10, &OdomGoalCreator::odom_callback, this);
     pub_local_goal = nh.advertise<geometry_msgs::PoseStamped>("/odom_goal", 1);
@@ -58,12 +59,21 @@ void OdomGoalCreator::input_goal()
     if(a=="y") received_goal = true;
 }
 
-void OdomGoalCreator::calc_reached_goal(std::vector<double> trans_pose)
+double OdomGoalCreator::calc_reached_goal(std::vector<double> trans_pose)
 {
     reached_goal = false;
     double distance = sqrt(pow(trans_pose[0], 2) + pow(trans_pose[1], 2));
-    std::cout<<distance<<std::endl;
     if(distance < 0.5) reached_goal = true;
+    return distance;
+}
+
+int OdomGoalCreator::calc_time_out(double time_out_count)
+{
+    time_out = false;
+    int time = time_out_count * 1/hz;
+    int rest_time = max_time - time;
+    if(time >= max_time) time_out = true;
+    return rest_time;
 }
 
 void OdomGoalCreator::process()
@@ -75,17 +85,24 @@ void OdomGoalCreator::process()
         {
             geometry_msgs::PoseStamped local_goal;
             std::vector<double> trans_pose = calc_goal();
-            calc_reached_goal(trans_pose);
-            if(reached_goal)
+            double distance = calc_reached_goal(trans_pose);
+            int rest_time = calc_time_out(time_out_count);
+            printf("Rest time: %d[sec] distance: %.2f[m]\n", rest_time, distance);
+
+            if(reached_goal || time_out)
             {
-                printf("Reach Goal!!\n");
+                if(reached_goal) printf("Reach Goal!!\n");
+                if(time_out) printf("Time out!!\n");
                 local_goal.pose.position.x = 0.0;
                 local_goal.pose.position.y = 0.0;
+                time_out_count = 0.0;
+                time_out = false;
                 received_goal = false;
                 base_odom_set = false;
             }
             else
             {
+                time_out_count ++;
                 local_goal.pose.position.x = trans_pose[0];
                 local_goal.pose.position.y = trans_pose[1];
             }
